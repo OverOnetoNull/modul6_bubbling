@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Image Gallery</title>
+
+  <link rel="icon" type="image/x-icon" href="img/favicon.png">
+
+  <style>
+    /* basic reset */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #999;
+    }
+
+    /* header / footer */
+
+    .Header,
+    .Footer {
+      background-color: #0b017c;
+      color: #fff;
+      text-align: center;
+      padding: 12px;
+      position: fixed;
+      left: 0;
+      right: 0;
+      z-index: 100;
+    }
+
+    .Header {
+      top: 0;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .Footer {
+      bottom: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .logo-link {
+      display: flex;
+      align-items: center;
+      margin-right: auto;
+    }
+
+    .logo {
+      height: 36px;
+      width: auto;
+      margin-left: 12px;
+      display: block;
+    }
+
+    /* main layout */
+
+    .main {
+      min-height: 100vh;
+      background-color: rgb(153, 132, 132);
+      padding-top: 60px;   /* header height */
+      padding-bottom: 60px;/* footer height */
+    }
+
+    .content {
+      background-color: rgb(36, 43, 229);
+      min-height: calc(100vh - 120px);
+      padding: 16px;
+      overflow-y: auto;
+    }
+
+    /* titles */
+
+    .CentralTitle h1 {
+      margin-top: 36px;
+      margin-bottom: 52px;
+      text-align: center;
+      color: #fff;
+      font-size: 20px;
+    }
+
+    .Footer h1 {
+      font-size: 16px;
+    }
+
+    .Footer h2 {
+      font-size: 12px;
+    }
+
+    /* thumbnails */
+
+    .imageContainer {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 12px;
+    }
+
+    .image {
+      width: calc(50% - 12px);
+      max-width: 180px;
+      aspect-ratio: 4 / 3;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background-color: #000;
+      border-radius: 4px;
+      overflow: hidden;
+      cursor: pointer;
+    }
+
+    .image img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      display: block;
+      transition: transform 0.25s ease, box-shadow 0.25s ease;
+    }
+
+    .image:hover img,
+    .image:focus-within img {
+      transform: scale(1.05);
+      box-shadow: 0 0 8px rgba(0, 0, 0, 0.6);
+    }
+
+    /* responsive columns + titles */
+
+    @media (min-width: 480px) {
+      .image { width: calc(33.33% - 12px); }
+      .CentralTitle h1 { font-size: 24px; }
+      .Footer h1 { font-size: 18px; }
+      .Footer h2 { font-size: 13px; }
+    }
+
+    @media (min-width: 768px) {
+      .image { width: calc(25% - 12px); }
+      .CentralTitle h1 { font-size: 28px; }
+      .Footer h1 { font-size: 20px; }
+      .Footer h2 { font-size: 14px; }
+    }
+
+    @media (min-width: 1024px) {
+      .image { width: calc(20% - 12px); }
+      .CentralTitle h1 { font-size: 32px; }
+      .Footer h1 { font-size: 22px; }
+      .Footer h2 { font-size: 16px; }
+    }
+
+    @media (min-width: 1400px) {
+      .image { width: calc(16.66% - 12px); }
+    }
+
+    /* overlay */
+
+    .overlay {
+      position: fixed;
+      inset: 0;
+      background-color: rgba(0, 0, 0, 0.8);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 16px;
+      z-index: 999;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    /* dialog layout */
+
+    .dialog-content {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .dialog-image-wrapper {
+      width: 90vw;
+      max-width: 900px;
+      max-height: 80vh;
+      aspect-ratio: 4 / 3;
+      background-color: #000;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      border-radius: 4px;
+      position: relative;
+      z-index: 10;
+    }
+
+    .dialog-image-wrapper img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      display: block;
+    }
+
+    /* click zones for prev / next */
+
+    .dialog-nav {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 15%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: transparent;
+      cursor: pointer;
+      z-index: 20;
+    }
+
+    .dialog-nav-prev { left: 0; }
+    .dialog-nav-next { right: 0; }
+
+    /* close button container */
+
+    .dialog-close-area {
+      position: absolute;
+      top: -46px;
+      right: -10px;
+      background: rgba(0, 0, 0, 0.45);
+      padding: 6px;
+      border-radius: 50%;
+      z-index: 30;
+    }
+
+    /* buttons */
+
+    .dialog-btn {
+      padding: 10px 14px;
+      background: rgba(0, 0, 0, 0.65);
+      border-radius: 6px;
+      border: 2px solid transparent;
+      cursor: pointer;
+      color: #fff;
+      font-size: 18px;
+      user-select: none;
+    }
+
+    .dialog-btn:focus-visible {
+      outline: none;
+      border-color: #ffeb3b;
+      box-shadow: 0 0 0 3px rgba(255, 235, 59, 0.6);
+    }
+
+    /* buttons / nav adapt on larger screens */
+
+    @media (min-width: 600px) {
+      .dialog-btn {
+        padding: 8px 11px;
+        font-size: 16px;
+      }
+
+      .dialog-nav {
+        width: 12%;
+      }
+
+      .dialog-close-area {
+        top: -40px;
+        right: 6px;
+      }
+    }
+
+    @media (min-width: 1024px) {
+      .dialog-btn {
+        padding: 6px 9px;
+        font-size: 15px;
+      }
+
+      .dialog-nav {
+        width: 10%;
+      }
+
+      .dialog-close-area {
+        top: -36px;
+        right: 12px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <header class="Header">
+    <a href="#" class="logo-link">
+      <img src="img/Fotogram_Logo.svg" alt="Fotogram Logo" class="logo">
+    </a>
+  </header>
+
+  <section class="main">
+    <main class="content">
+      <div class="CentralTitle">
+        <h1>My personal photo Album</h1>
+      </div>
+      <div id="main" class="imageContainer"></div>
+    </main>
+  </section>
+
+  <footer class="Footer">
+    <h1>Dankademie Picture Portal</h1>
+    <h2>© 2025 Daniel Sack — All rights reserved.</h2>
+  </footer>
+
+  <div id="dialog" class="overlay hidden"></div>
+
+  <script>
+    /*
+      Central idea:
+      - body listens for all clicks (bubbling)
+      - inner UI calls stopEventBubbling() where needed
+      - console logs show where events travel
+    */
+
+    // image file names without extension
+    const imgs = [
+      "ai-generated-8756365_1280",
+      "boat-4868355_640",
+      "boat-7497807_640",
+      "boat-7497809_640",
+      "coast-6917777_640",
+      "dominicana-4620393_640",
+      "sea-4994010_640",
+      "sun-4475490_640",
+      "sun-5039871_640",
+      "sunset-5429861_640",
+      "water-4873775_1280"
+    ];
+
+    const basePath = "img/pictures/";
+    const ext = ".jpg";
+
+    let currentIndex = 0;
+    let lastFocusedThumb = null;
+
+    // central helper to stop bubbling + log it
+    function stopEventBubbling(event, label) {
+      console.log(`[bubbling blocked in ${label}] target:`, event.target);
+      event.stopPropagation();
+    }
+
+    // build thumbnail grid
+    function renderImages() {
+      const container = document.getElementById("main");
+      container.innerHTML = "";
+
+      imgs.forEach(function (name, index) {
+        const box = document.createElement("div");
+        box.className = "image";
+        box.tabIndex = 0;
+
+        const img = document.createElement("img");
+        img.src = basePath + name + ext;
+        img.alt = "Thumbnail: " + name;
+
+        box.appendChild(img);
+
+        box.addEventListener("click", function (event) {
+          stopEventBubbling(event, "thumbnail");
+          console.log("[thumbnail clicked]", name, "index:", index);
+          lastFocusedThumb = box;
+          openDialog(index);
+        });
+
+        box.addEventListener("keydown", function (event) {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            console.log("[thumbnail key activate]", name, "index:", index);
+            lastFocusedThumb = box;
+            openDialog(index);
+          }
+        });
+
+        container.appendChild(box);
+      });
+    }
+
+    // create dialog DOM for currentIndex
+    function updateDialog() {
+      const dialog = document.getElementById("dialog");
+      const fileName = imgs[currentIndex];
+      const imgSrc = basePath + fileName + ext;
+
+      console.log("[dialog update] index:", currentIndex, "file:", fileName);
+
+      dialog.innerHTML = `
+        <div class="dialog-content" onclick="event.stopPropagation()">
+
+          <div class="dialog-close-area">
+            <button
+              class="dialog-btn"
+              type="button"
+              aria-label="Close image viewer"
+            >
+              X
+            </button>
+          </div>
+
+          <div class="dialog-nav dialog-nav-prev">
+            <button
+              class="dialog-btn"
+              type="button"
+              aria-label="Previous image"
+            >
+              &#10094;
+            </button>
+          </div>
+
+          <div class="dialog-image-wrapper">
+            <img src="${imgSrc}" alt="${fileName}">
+          </div>
+
+          <div class="dialog-nav dialog-nav-next">
+            <button
+              class="dialog-btn"
+              type="button"
+              aria-label="Next image"
+            >
+              &#10095;
+            </button>
+          </div>
+        </div>
+      `;
+
+      // wire dialog buttons with listeners (no inline onclick now)
+      const closeArea = dialog.querySelector(".dialog-close-area");
+      const closeBtn = dialog.querySelector(".dialog-close-area .dialog-btn");
+      const prevArea = dialog.querySelector(".dialog-nav-prev");
+      const prevBtn = dialog.querySelector(".dialog-nav-prev .dialog-btn");
+      const nextArea = dialog.querySelector(".dialog-nav-next");
+      const nextBtn = dialog.querySelector(".dialog-nav-next .dialog-btn");
+
+      closeArea.addEventListener("click", (event) => {
+        stopEventBubbling(event, "dialog close-area");
+        console.log("[dialog close area clicked]");
+        closeDialog();
+      });
+
+      closeBtn.addEventListener("click", (event) => {
+        stopEventBubbling(event, "dialog close-btn");
+        console.log("[dialog close button clicked]");
+        closeDialog();
+      });
+
+      prevArea.addEventListener("click", (event) => {
+        stopEventBubbling(event, "dialog prev-area");
+        console.log("[dialog prev area clicked] → close");
+        closeDialog();
+      });
+
+      prevBtn.addEventListener("click", (event) => {
+        stopEventBubbling(event, "dialog prev-btn");
+        console.log("[dialog prev button clicked]");
+        openDialog(currentIndex - 1);
+      });
+
+      nextArea.addEventListener("click", (event) => {
+        stopEventBubbling(event, "dialog next-area");
+        console.log("[dialog next area clicked] → close");
+        closeDialog();
+      });
+
+      nextBtn.addEventListener("click", (event) => {
+        stopEventBubbling(event, "dialog next-btn");
+        console.log("[dialog next button clicked]");
+        openDialog(currentIndex + 1);
+      });
+
+      if (closeBtn) {
+        closeBtn.focus();
+      }
+    }
+
+    // open dialog at index
+    function openDialog(index) {
+      if (index < 0) {
+        index = imgs.length - 1;
+      } else if (index >= imgs.length) {
+        index = 0;
+      }
+
+      currentIndex = index;
+      console.log("[openDialog] index:", currentIndex);
+
+      const dialog = document.getElementById("dialog");
+      dialog.classList.remove("hidden");
+      updateDialog();
+    }
+
+    // close dialog and restore focus
+    function closeDialog() {
+      console.log("[closeDialog]");
+      const dialog = document.getElementById("dialog");
+      dialog.classList.add("hidden");
+
+      if (lastFocusedThumb) {
+        lastFocusedThumb.focus();
+      }
+    }
+
+    document.addEventListener("DOMContentLoaded", function () {
+      console.log("[DOMContentLoaded]");
+      renderImages();
+
+      const dialog = document.getElementById("dialog");
+      const header = document.querySelector(".Header");
+      const main = document.querySelector(".main");
+      const footer = document.querySelector(".Footer");
+
+      // global body click to demonstrate bubbling
+      document.body.addEventListener("click", (event) => {
+        console.log("[body click bubbled from]", event.target);
+      });
+
+      // stop bubbling on main layout containers
+      header.addEventListener("click", (event) => {
+        stopEventBubbling(event, "Header");
+      });
+
+      main.addEventListener("click", (event) => {
+        stopEventBubbling(event, "Main");
+      });
+
+      footer.addEventListener("click", (event) => {
+        stopEventBubbling(event, "Footer");
+      });
+
+      // click on dark overlay closes dialog
+      dialog.addEventListener("click", function (event) {
+        if (event.target === dialog) {
+          console.log("[overlay background clicked]");
+          closeDialog();
+        }
+      });
+
+      // keyboard control while dialog is open
+      document.addEventListener("keydown", function (event) {
+        const isOpen = !dialog.classList.contains("hidden");
+        if (!isOpen) return;
+
+        if (event.key === "Escape") {
+          console.log("[keydown ESC]");
+          closeDialog();
+        } else if (event.key === "ArrowRight") {
+          console.log("[keydown ArrowRight]");
+          openDialog(currentIndex + 1);
+        } else if (event.key === "ArrowLeft") {
+          console.log("[keydown ArrowLeft]");
+          openDialog(currentIndex - 1);
+        }
+      });
+    });
+  </script>
+</body>
+</html>
